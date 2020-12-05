@@ -8,14 +8,14 @@ let username = "";
 let password = "";
 let token = "";
 
-USE_LOCAL_ENDPOINT = false;
+const USE_LOCAL_ENDPOINT = false;
 // set this flag to true if you want to use a local endpoint
 // set this flag to false if you want to use the online endpoint
-ENDPOINT_URL = ""
+let ENDPOINT_URL = ""
 if (USE_LOCAL_ENDPOINT){
-ENDPOINT_URL = "http://127.0.0.1:5000"
+  ENDPOINT_URL = "http://127.0.0.1:5000"
 } else{
-ENDPOINT_URL = "https://mysqlcs639.cs.wisc.edu"
+  ENDPOINT_URL = "https://mysqlcs639.cs.wisc.edu"
 }
 
 
