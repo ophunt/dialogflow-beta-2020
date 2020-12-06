@@ -39,7 +39,10 @@ async function getToken() {
 async function goToPage(page) {
   let request = {
     method: "PUT",
-    headers: { "Content-Type": "application/json", "x-access-token": token },
+    headers: {
+      "Content-Type": "application/json",
+      "x-access-token": token,
+    },
     body: JSON.stringify({
       back: false,
       dialogflowUpdated: true,
@@ -47,7 +50,7 @@ async function goToPage(page) {
     }),
   };
 
-  await fetch(ENDPOINT_URL + "/application", request);
+  await fetch(`${ENDPOINT_URL}/application`, request);
 }
 
 async function sendMessage(agent, msg, isUser = false) {
@@ -161,14 +164,16 @@ app.post("/", express.json(), (req, res) => {
 
   async function listCategoryTags() {
     if (reqLogin()) {
-      const res = await fetch(`${ENDPOINT_URL}/categories/${currentCategory}`, {
+      const res = await fetch(`${ENDPOINT_URL}/categories/${currentCategory}/tags`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           "x-access-token": token,
         },
       });
-      const tags = (await res.json()).join(", ");
+      const tags = (await res.json()).tags;
+
+      await sendMessage(agent, `The tags for ${currentCategory} are ${tags.join(", ")}`);
     }
   }
 
@@ -176,9 +181,10 @@ app.post("/", express.json(), (req, res) => {
   intentMap.set("Default Welcome Intent", welcome);
   intentMap.set("Login", login);
   intentMap.set("Logout", logout);
+  intentMap.set("Show Homepage", homepage);
   intentMap.set("List Categories", listCategories);
   intentMap.set("Show Category", showCategory);
-  intentMap.set("Show Homepage", homepage);
+  intentMap.set("List Category Tags", listCategoryTags);
   agent.handleRequest(intentMap);
 });
 
