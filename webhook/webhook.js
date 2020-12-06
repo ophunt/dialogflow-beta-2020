@@ -230,6 +230,7 @@ app.post("/", express.json(), (req, res) => {
       const itemNames = items.map((p) => `${p.count} ${p.name}`);
       const itemCosts = items.map((p) => p.price);
       const totalCost = itemCosts.reduce((a, b) => a + b, 0);
+      const totalCount = items.map(p => p.count).reduce((a, b) => a + b, 0);
 
       await goToPage(`/${username}/cart`);
       const readout = agent.parameters.cartReadout;
@@ -238,7 +239,7 @@ app.post("/", express.json(), (req, res) => {
       } else if (readout === "price") {
         await sendMessage(agent, `Your cart costs ${totalCost} dollars total`);
       } else if (readout === "count") {
-        await sendMessage(agent, `Your cart contains ${items.length} items`);
+        await sendMessage(agent, `Your cart contains ${totalCount} items`);
       } else {
         await sendMessage(agent, `Your cart contains ${itemNames.join(", ")}`);
       }
