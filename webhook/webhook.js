@@ -62,7 +62,7 @@ async function sendMessage(agent, msg, isUser=false) {
     body: JSON.stringify(body)
   };
 
-  await fetch(ENDPOINT_URL + `/${username}`, request);
+  await fetch(ENDPOINT_URL + `/application/messages`, request);
   if (!isUser) agent.add(msg);
 }
 
@@ -97,10 +97,21 @@ app.post("/", express.json(), (req, res) => {
     await sendMessage(agent, `I've logged you out ${username}`);
   }
 
+  async function listCategories() {
+    await sendMessage(agent, `The categories are Hats, Sweatshirts, Plushes, Leggings, Tees, and Bottoms. \
+                              Would you like to view one of these?`);
+  }
+
+  async function categories() {
+    
+  }
+
   let intentMap = new Map();
   intentMap.set("Default Welcome Intent", welcome);
   intentMap.set("Login", login);
   intentMap.set("Logout", logout);
+  intentMap.set("List Categories", listCategories);
+  intentMap.set("Categories", categories);
   agent.handleRequest(intentMap);
 });
 
