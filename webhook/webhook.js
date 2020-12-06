@@ -7,7 +7,7 @@ const base64 = require("base-64");
 let username = "";
 let password = "";
 let token = "";
-let current_category = "";
+let currentCategory = "";
 
 const USE_LOCAL_ENDPOINT = false;
 // set this flag to true if you want to use a local endpoint
@@ -91,19 +91,23 @@ app.post("/", express.json(), (req, res) => {
   }
 
   async function login() {
-    username = agent.parameters.username;
-    password = agent.parameters.password;
-    if (await getToken()) {
-      // Clear all previous messages
-      fetch(ENDPOINT_URL + "/application/messages", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-access-token": token },
-      });
-      // Send message and go to home page
-      await sendMessage(agent, `Logging you in now ${username}!`, false);
-      await goToPage(`/${username}`);
+    if (token === "") {
+      username = agent.parameters.username;
+      password = agent.parameters.password;
+      if (await getToken()) {
+        // Clear all previous messages
+        fetch(ENDPOINT_URL + "/application/messages", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", "x-access-token": token },
+        });
+        // Send message and go to home page
+        await sendMessage(agent, `Logging you in now ${username}!`, false);
+        await goToPage(`/${username}`);
+      } else {
+        await sendMessage(agent, `Sorry ${username}, that password didn't work. Please try again.`);
+      }
     } else {
-      await sendMessage(agent, `Sorry ${username}, that password didn't work. Please try again.`);
+      await sendMessage(agent, `You're already logged in, ${username}`);
     }
   }
 
@@ -117,20 +121,54 @@ app.post("/", express.json(), (req, res) => {
 
   async function listCategories() {
     if (await reqLogin()) {
-      await sendMessage(
-        agent,
-        `The categories are Hats, Sweatshirts, \
-        Plushes, Leggings, Tees, and Bottoms. \
-        Would you like to view one of these?`
-      );
+      const res = await fetch(`${ENDPOINT_URL}/categories`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": token,
+        },
+      });
+      const categories = (await res.json()).categories;
+      await sendMessage(agent, `The categories are ${categories.join(", ")}. Would you like to view one of these?`);
     }
   }
 
-  async function categories() {
+  async function showCategory() {
     if (await reqLogin()) {
       const cat = agent.parameters.categories;
+      currentCategory = cat;
       await goToPage(`/${username}/${cat}`);
-      await sendMessage(agent, `Here are our ${cat}.`);
+
+      const res = await fetch(`${ENDPOINT_URL}/products`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": token,
+        },
+      });
+      const items = (await res.json()).products.filter((p) => p.category === currentCategory).map((p) => p.name);
+
+      await sendMessage(agent, `The items in ${currentCategory} are ${items.join(", ")}`);
+    }
+  }
+
+  async function homepage() {
+    if (reqLogin()) {
+      await goToPage(`${username}`);
+      await sendMessage(agent, `Here's the homepage ${username}`);
+    }
+  }
+
+  async function listCategoryTags() {
+    if (reqLogin()) {
+      const res = await fetch(`${ENDPOINT_URL}/categories/${currentCategory}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": token,
+        },
+      });
+      const tags = (await res.json()).join(", ");
     }
   }
 
@@ -139,7 +177,8 @@ app.post("/", express.json(), (req, res) => {
   intentMap.set("Login", login);
   intentMap.set("Logout", logout);
   intentMap.set("List Categories", listCategories);
-  intentMap.set("Categories", categories);
+  intentMap.set("Show Category", showCategory);
+  intentMap.set("Show Homepage", homepage);
   agent.handleRequest(intentMap);
 });
 
