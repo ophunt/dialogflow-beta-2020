@@ -10,6 +10,7 @@ let token = "";
 let currentCategory = "";
 let currentProdID = 0;
 let currentProdName = "";
+let canConfirmCart = false;
 
 const USE_LOCAL_ENDPOINT = false;
 // set this flag to true if you want to use a local endpoint
@@ -328,6 +329,58 @@ app.post("/", express.json(), (req, res) => {
     }
   }
 
+  async function reviewCart() {
+    if (reqLogin()) {
+      const res = await fetch(`${ENDPOINT_URL}/application/products`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": token,
+        },
+      });
+      const items = (await res.json()).products;
+      const itemNames = items.map((p) => `${p.count} ${p.name}`);
+      const itemCosts = items.map((p) => p.price);
+      const totalCost = itemCosts.reduce((a, b) => a + b, 0);
+
+      if (items.length === 0) {
+        canConfirmCart = false;
+        await sendMessage(agent, `Your cart is empty; please add some items to it before checking out!`);
+      } else {
+        canConfirmCart = true;
+        await goToPage(`/${username}/cart-review`);
+        await sendMessage(agent, `Confirm your purchase of ${itemNames.join(", ")} for ${totalCost} dollars?`);
+      }
+    }
+  }
+
+  async function confirmCart() {
+    if (reqLogin()) {
+      if (canConfirmCart) {
+        const res = await fetch(`${ENDPOINT_URL}/application/products`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "x-access-token": token,
+          },
+        });
+        const items = (await res.json()).products;
+        const itemNames = items.map((p) => `${p.count} ${p.name}`);
+        const itemCosts = items.map((p) => p.price);
+        const totalCost = itemCosts.reduce((a, b) => a + b, 0);
+
+        await goToPage(`/${username}/cart-confirmed`);
+        await sendMessage(
+          agent,
+          `Your purchase of ${itemNames.join(", ")} \
+          for ${totalCost} dollars has been completed.`
+        );
+      } else {
+        await sendMessage(agent, `Please review your cart before confirming.`);
+      }
+    }
+  }
+
   let intentMap = new Map();
   intentMap.set("Default Welcome Intent", welcome);
   intentMap.set("Login", login);
@@ -339,6 +392,8 @@ app.post("/", express.json(), (req, res) => {
   intentMap.set("Add to Filter", addToFilter);
   intentMap.set("Clear Filter", clearFilter);
   intentMap.set("List Cart", showCart);
+  intentMap.set("Review Cart", reviewCart);
+  intentMap.set("Review Cart - yes", confirmCart);
   intentMap.set("Add to Cart", addToCart);
   intentMap.set("Empty Cart", emptyCart);
   intentMap.set("Show Product", showProduct);
