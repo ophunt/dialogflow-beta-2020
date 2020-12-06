@@ -124,6 +124,13 @@ app.post("/", express.json(), (req, res) => {
     }
   }
 
+  async function homepage() {
+    if (reqLogin()) {
+      await goToPage(`${username}`);
+      await sendMessage(agent, `Here's the homepage ${username}`);
+    }
+  }
+
   async function listCategories() {
     if (await reqLogin()) {
       const res = await fetch(`${ENDPOINT_URL}/categories`, {
@@ -157,10 +164,40 @@ app.post("/", express.json(), (req, res) => {
     }
   }
 
-  async function homepage() {
+  async function addToFilter() {
     if (reqLogin()) {
-      await goToPage(`${username}`);
-      await sendMessage(agent, `Here's the homepage ${username}`);
+      if (currentCategory !== "") {
+        const tag = agent.parameters.tag;
+        let request = {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-access-token": token },
+          body: tag,
+        };
+        const res = await fetch(`${ENDPOINT_URL}/application/tags/${tag}`, request);
+        if (res.ok) {
+          await sendMessage(agent, `I've added ${tag} to your filter.`);
+        } else {
+          await sendMessage(
+            agent,
+            `Sorry, that isn't a valid tag. \
+            To get the list of valid tags, \
+            ask what tags are in this category.`
+          );
+        }
+      }
+    }
+  }
+
+  async function clearFilter() {
+    if (reqLogin()) {
+      if (currentCategory !== "") {
+        let request = {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", "x-access-token": token },
+        };
+        await fetch(`${ENDPOINT_URL}/application/tags`, request);
+        await sendMessage(agent, `I've cleared your filter.`);
+      }
     }
   }
 
@@ -270,6 +307,8 @@ app.post("/", express.json(), (req, res) => {
   intentMap.set("List Categories", listCategories);
   intentMap.set("Show Category", showCategory);
   intentMap.set("List Category Tags", listCategoryTags);
+  intentMap.set("Add to Filter", addToFilter);
+  intentMap.set("Clear Filter", clearFilter);
   intentMap.set("List Cart", showCart);
   intentMap.set("Show Product", showProduct);
   intentMap.set("Read Reviews", readReviews);
