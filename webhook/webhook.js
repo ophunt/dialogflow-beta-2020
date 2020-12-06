@@ -7,6 +7,7 @@ const base64 = require("base-64");
 let username = "";
 let password = "";
 let token = "";
+let current_category = "";
 
 const USE_LOCAL_ENDPOINT = false;
 // set this flag to true if you want to use a local endpoint
@@ -66,6 +67,15 @@ async function sendMessage(agent, msg, isUser = false) {
   if (!isUser) agent.add(msg);
 }
 
+async function requireLogin(agent) {
+  if (token === "") {
+    await sendMessage(agent, "Please sign in first.");
+    return false;
+  } else {
+    return true;
+  }
+}
+
 app.get("/", (req, res) => res.send("online"));
 app.post("/", express.json(), (req, res) => {
   const agent = new WebhookClient({ request: req, response: res });
@@ -73,8 +83,10 @@ app.post("/", express.json(), (req, res) => {
   const query = agent.query;
   sendMessage(agent, query, true);
 
+  const reqLogin = async () => requireLogin(agent);
+
   function welcome() {
-    sendMessage(agent, "Webhook works!");
+    sendMessage(agent, "Hello! Sign in to start using the application.");
     console.log(ENDPOINT_URL);
   }
 
@@ -96,23 +108,30 @@ app.post("/", express.json(), (req, res) => {
   }
 
   async function logout() {
-    await goToPage(`/`);
-    token = "";
-    await sendMessage(agent, `I've logged you out ${username}`);
+    if (await reqLogin()) {
+      await goToPage(`/`);
+      token = "";
+      await sendMessage(agent, `I've logged you out ${username}`);
+    }
   }
 
   async function listCategories() {
-    await sendMessage(
-      agent,
-      `The categories are Hats, Sweatshirts, Plushes, Leggings, Tees, and Bottoms. \
-                              Would you like to view one of these?`
-    );
+    if (await reqLogin()) {
+      await sendMessage(
+        agent,
+        `The categories are Hats, Sweatshirts, \
+        Plushes, Leggings, Tees, and Bottoms. \
+        Would you like to view one of these?`
+      );
+    }
   }
 
   async function categories() {
-    const cat = agent.parameters.categories;
-    await goToPage(`/${username}/${cat}`);
-    await sendMessage(agent, `Here are our ${cat}.`);
+    if (await reqLogin()) {
+      const cat = agent.parameters.categories;
+      await goToPage(`/${username}/${cat}`);
+      await sendMessage(agent, `Here are our ${cat}.`);
+    }
   }
 
   let intentMap = new Map();
