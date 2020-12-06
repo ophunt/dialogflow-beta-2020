@@ -127,7 +127,7 @@ app.post("/", express.json(), (req, res) => {
 
   async function homepage() {
     if (reqLogin()) {
-      await goToPage(`${username}`);
+      await goToPage(`/${username}`);
       await sendMessage(agent, `Here's the homepage ${username}`);
     }
   }
@@ -228,7 +228,7 @@ app.post("/", express.json(), (req, res) => {
       });
       const items = (await res.json()).products;
       const itemNames = items.map((p) => `${p.count} ${p.name}`);
-      const itemCosts = items.map((p) => p.price);
+      const itemCosts = items.map((p) => p.price * p.count);
       const totalCost = itemCosts.reduce((a, b) => a + b, 0);
       const totalCount = items.map(p => p.count).reduce((a, b) => a + b, 0);
 
@@ -341,7 +341,7 @@ app.post("/", express.json(), (req, res) => {
       });
       const items = (await res.json()).products;
       const itemNames = items.map((p) => `${p.count} ${p.name}`);
-      const itemCosts = items.map((p) => p.price);
+      const itemCosts = items.map((p) => p.price * p.count);
       const totalCost = itemCosts.reduce((a, b) => a + b, 0);
 
       if (items.length === 0) {
@@ -367,7 +367,7 @@ app.post("/", express.json(), (req, res) => {
         });
         const items = (await res.json()).products;
         const itemNames = items.map((p) => `${p.count} ${p.name}`);
-        const itemCosts = items.map((p) => p.price);
+        const itemCosts = items.map((p) => p.price * p.count);
         const totalCost = itemCosts.reduce((a, b) => a + b, 0);
 
         await goToPage(`/${username}/cart-confirmed`);
