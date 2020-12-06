@@ -226,7 +226,7 @@ app.post("/", express.json(), (req, res) => {
         },
       });
       const items = (await res.json()).products;
-      const itemNames = items.map((p) => p.name);
+      const itemNames = items.map((p) => `${p.count} ${p.name}`);
       const itemCosts = items.map((p) => p.price);
       const totalCost = itemCosts.reduce((a, b) => a + b, 0);
 
@@ -299,6 +299,35 @@ app.post("/", express.json(), (req, res) => {
     }
   }
 
+  async function addToCart() {
+    if (reqLogin()) {
+      if (currentProdID !== 0) {
+        const amount = agent.parameters.amount || 1;
+        const request = {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-access-token": token },
+        };
+
+        for (let i = 0; i < amount; i++) {
+          await fetch(`${ENDPOINT_URL}/application/products/${currentProdID}`, request);
+        }
+        await sendMessage(agent, `I've added ${amount} ${currentProdName} to your cart.`);
+      }
+    }
+  }
+
+  async function emptyCart() {
+    if (reqLogin()) {
+      const request = {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-access-token": token },
+      };
+
+      await fetch(`${ENDPOINT_URL}/application/products`, request);
+      await sendMessage(agent, `I've emptied your cart.`);
+    }
+  }
+
   let intentMap = new Map();
   intentMap.set("Default Welcome Intent", welcome);
   intentMap.set("Login", login);
@@ -310,6 +339,8 @@ app.post("/", express.json(), (req, res) => {
   intentMap.set("Add to Filter", addToFilter);
   intentMap.set("Clear Filter", clearFilter);
   intentMap.set("List Cart", showCart);
+  intentMap.set("Add to Cart", addToCart);
+  intentMap.set("Empty Cart", emptyCart);
   intentMap.set("Show Product", showProduct);
   intentMap.set("Read Reviews", readReviews);
   agent.handleRequest(intentMap);
