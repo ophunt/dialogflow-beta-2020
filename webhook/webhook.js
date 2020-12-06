@@ -177,6 +177,34 @@ app.post("/", express.json(), (req, res) => {
     }
   }
 
+  async function showCart() {
+    if (reqLogin()) {
+      const res = await fetch(`${ENDPOINT_URL}/application/products`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": token,
+        },
+      });
+      const items = (await res.json()).products;
+      const itemNames = items.map(p => p.name);
+      const itemCosts = items.map(p => p.price);
+      const totalCost = itemCosts.reduce((a, b) => a + b, 0);
+
+      await goToPage(`/${username}/cart`);
+      const readout = agent.parameters.cartReadout;
+      if (!readout || readout === "items") {
+        await sendMessage(agent, `Your cart contains ${itemNames.join(", ")}`);
+      } else if (readout === "price") {
+        await sendMessage(agent, `Your cart costs ${totalCost} dollars total`);
+      } else if (readout === "count") {
+        await sendMessage(agent, `Your cart contains ${items.length} items`);
+      } else {
+        await sendMessage(agent, `Your cart contains ${itemNames.join(", ")}`);
+      }
+    }
+  }
+
   let intentMap = new Map();
   intentMap.set("Default Welcome Intent", welcome);
   intentMap.set("Login", login);
@@ -185,6 +213,7 @@ app.post("/", express.json(), (req, res) => {
   intentMap.set("List Categories", listCategories);
   intentMap.set("Show Category", showCategory);
   intentMap.set("List Category Tags", listCategoryTags);
+  intentMap.set("List Cart", showCart);
   agent.handleRequest(intentMap);
 });
 
