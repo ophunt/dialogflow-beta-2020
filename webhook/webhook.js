@@ -8,6 +8,8 @@ let username = "";
 let password = "";
 let token = "";
 let currentCategory = "";
+let currentProdID = 0;
+let currentProdName = "";
 
 const USE_LOCAL_ENDPOINT = false;
 // set this flag to true if you want to use a local endpoint
@@ -187,8 +189,8 @@ app.post("/", express.json(), (req, res) => {
         },
       });
       const items = (await res.json()).products;
-      const itemNames = items.map(p => p.name);
-      const itemCosts = items.map(p => p.price);
+      const itemNames = items.map((p) => p.name);
+      const itemCosts = items.map((p) => p.price);
       const totalCost = itemCosts.reduce((a, b) => a + b, 0);
 
       await goToPage(`/${username}/cart`);
@@ -205,6 +207,61 @@ app.post("/", express.json(), (req, res) => {
     }
   }
 
+  async function showProduct() {
+    if (reqLogin()) {
+      const res = await fetch(`${ENDPOINT_URL}/products`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-access-token": token,
+        },
+      });
+      const items = (await res.json()).products;
+      const search = agent.parameters.product.toLowerCase();
+      const foundItems = items.filter((p) => p.name.toLowerCase().includes(search));
+
+      if (foundItems.length === 1) {
+        const item = foundItems[0];
+        currentProdID = item.id;
+        currentProdName = item.name;
+        await goToPage(`/${username}/${item.category}/products/${currentProdID}`);
+        await sendMessage(agent, `Here's our ${item.name}. Its description says: ${item.description}`);
+      } else {
+        await sendMessage(
+          agent,
+          `Sorry, I wasn't able to find that item. \
+          Try looking by category, or using a different name for it.`
+        );
+      }
+    }
+  }
+
+  async function readReviews() {
+    if (reqLogin()) {
+      if (currentProdID !== 0) {
+        const res = await fetch(`${ENDPOINT_URL}/products/${currentProdID}/reviews`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "x-access-token": token,
+          },
+        });
+        const reviews = (await res.json()).reviews;
+        if (agent.parameters.readAverage) {
+          const avgReview = reviews.map((r) => r.stars).reduce((a, b) => a + b, 0) / reviews.length;
+          await sendMessage(agent, `The average rating for ${currentProdName} is ${avgReview} stars.`);
+        } else {
+          const reviewString = reviews
+            .map((r) => `${r.title}: ${r.text}. ${r.stars} stars. `)
+            .join("Another review says: ");
+          await sendMessage(agent, `Here are the reviews for our ${currentProdName}. ${reviewString}`);
+        }
+      } else {
+        await sendMessage(agent, `You must first look at a product for me to read its reviews.`);
+      }
+    }
+  }
+
   let intentMap = new Map();
   intentMap.set("Default Welcome Intent", welcome);
   intentMap.set("Login", login);
@@ -214,6 +271,8 @@ app.post("/", express.json(), (req, res) => {
   intentMap.set("Show Category", showCategory);
   intentMap.set("List Category Tags", listCategoryTags);
   intentMap.set("List Cart", showCart);
+  intentMap.set("Show Product", showProduct);
+  intentMap.set("Read Reviews", readReviews);
   agent.handleRequest(intentMap);
 });
 
