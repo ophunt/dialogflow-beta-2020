@@ -49,17 +49,17 @@ async function goToPage(page) {
   await fetch(ENDPOINT_URL + "/application", request);
 }
 
-async function sendMessage(agent, msg, isUser=false) {
+async function sendMessage(agent, msg, isUser = false) {
   let body = {
     isUser: isUser,
     text: msg,
-    date: new Date().toISOString()
-  }
+    date: new Date().toISOString(),
+  };
 
   let request = {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-access-token": token },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   };
 
   await fetch(ENDPOINT_URL + `/application/messages`, request);
@@ -79,11 +79,15 @@ app.post("/", express.json(), (req, res) => {
   }
 
   async function login() {
-    // You need to set this from `username` entity that you declare in DialogFlow
     username = agent.parameters.username;
-    // You need to set this from password entity that you declare in DialogFlow
     password = agent.parameters.password;
     if (await getToken()) {
+      // Clear all previous messages
+      fetch(ENDPOINT_URL + "/application/messages", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-access-token": token },
+      });
+      // Send message and go to home page
       await sendMessage(agent, `Logging you in now ${username}!`, false);
       await goToPage(`/${username}`);
     } else {
@@ -98,12 +102,17 @@ app.post("/", express.json(), (req, res) => {
   }
 
   async function listCategories() {
-    await sendMessage(agent, `The categories are Hats, Sweatshirts, Plushes, Leggings, Tees, and Bottoms. \
-                              Would you like to view one of these?`);
+    await sendMessage(
+      agent,
+      `The categories are Hats, Sweatshirts, Plushes, Leggings, Tees, and Bottoms. \
+                              Would you like to view one of these?`
+    );
   }
 
   async function categories() {
-    
+    const cat = agent.parameters.categories;
+    await goToPage(`/${username}/${cat}`);
+    await sendMessage(agent, `Here are our ${cat}.`);
   }
 
   let intentMap = new Map();
